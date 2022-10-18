@@ -103,6 +103,13 @@ int main(int argc, char** argv) {
 		{'v', "version"},
 	};
 
+	Flag visualize_cameras_flag{
+		parser,
+		"VISUALIZE_CAMERAS",
+		"Visualizes cameras on startup.",
+		{"visualize-cameras"},
+	};
+
 	// Parse command line arguments and react to parsing
 	// errors using exceptions.
 	try {
@@ -214,6 +221,7 @@ int main(int argc, char** argv) {
 
 			testbed.reload_network_from_file(network_config_path.str());
 			testbed.m_train = !no_train_flag;
+			testbed.m_nerf.visualize_cameras = visualize_cameras_flag;
 		}
 
 		bool gui = !no_gui_flag;
