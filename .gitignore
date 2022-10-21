@@ -7,6 +7,7 @@
 /tmp
 /venv
 /video
+/data
 /*.json
 *.msgpack
 *.training
