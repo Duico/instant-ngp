@@ -298,6 +298,8 @@ if __name__ == "__main__":
     SENSOR_KEYS = ["CAM_FRONT", "CAM_FRONT_LEFT",
                    "CAM_FRONT_RIGHT", "CAM_BACK"]
     NUM_SAMPLES = 8
+    SCENE_NUM = 3 # 6
+    SCENE_SCALE = 0.5
 
     args = parse_args()
     if args.video_in != "":
@@ -316,7 +318,7 @@ if __name__ == "__main__":
         "frames": [],
     }
 
-    my_scene = nusc.scene[6]
+    my_scene = nusc.scene[SCENE_NUM]
     sample_token = my_scene['first_sample_token']
     # uncomment to visualize scene
     # nusc.render_sample(sample_token)
@@ -370,8 +372,10 @@ if __name__ == "__main__":
         avglen += np.linalg.norm(f["transform_matrix"][0:3, 3])
     avglen /= len(out["frames"])
     print("avg camera distance from origin", avglen)
-    # for f in out["frames"]:
-    #     f["transform_matrix"][0:3, 3] *= 4.0 / avglen  # scale to "nerf sized"
+
+    for f in out["frames"]:
+        f["transform_matrix"][0:3, 3] *= 4.0 * SCENE_SCALE / avglen  # scale to "nerf sized"
+
     # print(nframes,"frames")
     for f in out["frames"]:
         f["transform_matrix"] = f["transform_matrix"].tolist()
