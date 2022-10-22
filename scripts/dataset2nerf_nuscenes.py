@@ -211,23 +211,28 @@ def process_nuscenes_sample(sample, sensor_keys=["CAM_FRONT"]):
         camera_translation = np.array(
             calibrated_sensor["translation"]).reshape([3, -1])
 
-        # print(ego_rotation)
+        print(ego_rotation)
         # print(camera_rotation)
 
+        bottom = np.array([0.0, 0.0, 0.0, 1.0]).reshape([1, 4])
+        
         rotation = camera_rotation @ ego_rotation
         translation = camera_translation + ego_translation
+        
+        ego: np.ndarray = np.concatenate( [np.concatenate([ego_rotation, ego_translation], 1), bottom], 0)
+        camera: np.ndarray = np.concatenate( [np.concatenate([camera_rotation, camera_translation], 1), bottom], 0)
+
 
         # translation = np.array([0,0,0]).reshape([3,-1])
 
-        bottom = np.array([0.0, 0.0, 0.0, 1.0]).reshape([1, 4])
         # ego : np.ndarray = np.concatenate([np.concatenate([ego_rotation, ego_translation], 1), bottom], 0)
         # camera : np.ndarray = np.concatenate([np.concatenate([camera_rotation, camera_translation], 1), bottom], 0)
 
         # print(rotation)
         # print(translation)
 
-        c2w: np.ndarray = np.concatenate(
-            [np.concatenate([rotation, translation], 1), bottom], 0)
+        # c2w: np.ndarray = np.concatenate( [np.concatenate([rotation, translation], 1), bottom], 0)
+        c2w = ego @ camera
 
         conv_mat = np.array([
             [0,  1, 0, 0],
@@ -311,9 +316,11 @@ if __name__ == "__main__":
         "frames": [],
     }
 
-    my_scene = nusc.scene[3]
+    my_scene = nusc.scene[6]
     sample_token = my_scene['first_sample_token']
-    # nusc.render_sample(first_sample_token)
+    # uncomment to visualize scene
+    # nusc.render_sample(sample_token)
+    # exit()
     sample = nusc.get('sample', sample_token)
     for frame in process_nuscenes_sample(sample, SENSOR_KEYS):
         out["frames"].append(frame)
@@ -354,7 +361,7 @@ if __name__ == "__main__":
                 totw += w
     if totw > 0.0:
         totp /= totw
-    print(totp)  # the cameras are looking at totp
+    print("totp:", totp)  # the cameras are looking at totp
     for f in out["frames"]:
         f["transform_matrix"][0:3, 3] -= totp
 
@@ -363,12 +370,12 @@ if __name__ == "__main__":
         avglen += np.linalg.norm(f["transform_matrix"][0:3, 3])
     avglen /= len(out["frames"])
     print("avg camera distance from origin", avglen)
-    for f in out["frames"]:
-        f["transform_matrix"][0:3, 3] *= 4.0 / avglen  # scale to "nerf sized"
-
+    # for f in out["frames"]:
+    #     f["transform_matrix"][0:3, 3] *= 4.0 / avglen  # scale to "nerf sized"
     # print(nframes,"frames")
     for f in out["frames"]:
         f["transform_matrix"] = f["transform_matrix"].tolist()
+
 
     print(f"writing {OUT_PATH}")
     with open(OUT_PATH, "w") as outfile:
