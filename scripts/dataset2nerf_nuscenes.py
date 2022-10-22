@@ -220,8 +220,8 @@ def process_nuscenes_sample(sample, sensor_keys=["CAM_FRONT"]):
 
         bottom = np.array([0.0, 0.0, 0.0, 1.0]).reshape([1, 4])
         
-        rotation = camera_rotation @ ego_rotation
-        translation = camera_translation + ego_translation
+        # rotation = camera_rotation @ ego_rotation
+        # translation = camera_translation + ego_translation
         
         ego: np.ndarray = np.concatenate( [np.concatenate([ego_rotation, ego_translation], 1), bottom], 0)
         camera: np.ndarray = np.concatenate( [np.concatenate([camera_rotation, camera_translation], 1), bottom], 0)
@@ -300,8 +300,8 @@ if __name__ == "__main__":
     nusc = NuScenes(version='v1.0-mini',
                     dataroot='/home/iaaip/Development/nuscenes', verbose=True)
     SENSOR_KEYS = ["CAM_FRONT", "CAM_FRONT_LEFT",
-                   "CAM_FRONT_RIGHT", "CAM_BACK"]
-    NUM_SAMPLES = 8
+                   "CAM_FRONT_RIGHT", "CAM_BACK", "CAM_BACK_RIGHT", "CAM_BACK_LEFT"]
+    NUM_SAMPLES = 14
     SCENE_NUM = 3 # 6
     SCENE_SCALE_COEFF = 0.5
 
@@ -353,21 +353,21 @@ if __name__ == "__main__":
         for frame in process_nuscenes_sample(sample, SENSOR_KEYS):
             out["frames"].append(frame)
 
-    up = np.zeros(3)
+    # up = np.zeros(3)
 
-    for f in out["frames"]:
-        up += f["transform_matrix"][0:3,1]
+    # for f in out["frames"]:
+    #     up += f["transform_matrix"][0:3,1]
 
-    # reorient the scene to be easier to work with
-    up = up / np.linalg.norm(up)
-    print("up vector was", up)
-    R = rotmat(up, [0, 0, 1])  # rotate up vector to [0,0,1]
-    R = np.pad(R, [0, 1])
-    R[-1, -1] = 1
+    # # reorient the scene to be easier to work with
+    # up = up / np.linalg.norm(up)
+    # print("up vector was", up)
+    # R = rotmat(up, [0, 0, 1])  # rotate up vector to [0,0,1]
+    # R = np.pad(R, [0, 1])
+    # R[-1, -1] = 1
 
-    for f in out["frames"]:
-        f["transform_matrix"] = np.matmul(
-            R, f["transform_matrix"])  # rotate up to be the z axis
+    # for f in out["frames"]:
+    #     f["transform_matrix"] = np.matmul(
+    #         R, f["transform_matrix"])  # rotate up to be the z axis
 
     if ADAPTIVE_RESCALE:
         # find a central point they are all looking at
