@@ -56,6 +56,10 @@ def parse_args():
     parser.add_argument("--out", default="transforms.json", help="output path")
     parser.add_argument("--vocab_path", default="",
                         help="vocabulary tree path")
+    parser.add_argument('--totp', nargs='+', type=float, help='center of attention. Subtracted from the position of each camera.')
+    parser.add_argument('--avglen', type=float, help='avg distance of cameras from center. Used as an inverse scaling factor.')
+    parser.add_argument("--adaptive_rescale",  action="store_true", help="compute totp and avglen automatically, instead of using the ones provided via --totp --avglen")
+    
     args = parser.parse_args()
     return args
 
@@ -299,7 +303,7 @@ if __name__ == "__main__":
                    "CAM_FRONT_RIGHT", "CAM_BACK"]
     NUM_SAMPLES = 8
     SCENE_NUM = 3 # 6
-    SCENE_SCALE = 0.5
+    SCENE_SCALE_COEFF = 0.5
 
     args = parse_args()
     if args.video_in != "":
@@ -311,6 +315,19 @@ if __name__ == "__main__":
     IMAGE_FOLDER = args.images
     TEXT_FOLDER = args.text
     OUT_PATH = args.out
+
+    ADAPTIVE_RESCALE = args.adaptive_rescale
+    TOTP = args.totp
+    AVGLEN = args.avglen
+    if not ADAPTIVE_RESCALE:
+        if not TOTP or len(TOTP)!=3:
+            print("Please specify --totp x y z, or use --adaptive_rescale")
+            exit(1)
+        if not AVGLEN:
+            print("Please specify --avglen, or use --adaptive_rescale")
+            exit(1)
+
+
     print(f"outputting to {OUT_PATH}...")
 
     out: dict[str, list] = {
@@ -344,37 +361,44 @@ if __name__ == "__main__":
     R = np.pad(R, [0, 1])
     R[-1, -1] = 1
 
-    for f in out["frames"]:
-        f["transform_matrix"] = np.matmul(
-            R, f["transform_matrix"])  # rotate up to be the z axis
+    if ADAPTIVE_RESCALE:
+        for f in out["frames"]:
+            f["transform_matrix"] = np.matmul(
+                R, f["transform_matrix"])  # rotate up to be the z axis
 
-    # find a central point they are all looking at
-    print("computing center of attention...")
-    totw = 0.0
-    totp = np.array([0.0, 0.0, 0.0])
-    for f in out["frames"]:
-        mf = f["transform_matrix"][0:3, :]
-        for g in out["frames"]:
-            mg = g["transform_matrix"][0:3, :]
-            p, w = closest_point_2_lines(
-                mf[:, 3], mf[:, 2], mg[:, 3], mg[:, 2])
-            if w > 0.00001:
-                totp += p*w
-                totw += w
-    if totw > 0.0:
-        totp /= totw
-    print("totp:", totp)  # the cameras are looking at totp
+        # find a central point they are all looking at
+        print("computing center of attention...")
+        totw = 0.0
+        totp = np.array([0.0, 0.0, 0.0])
+        for f in out["frames"]:
+            mf = f["transform_matrix"][0:3, :]
+            for g in out["frames"]:
+                mg = g["transform_matrix"][0:3, :]
+                p, w = closest_point_2_lines(
+                    mf[:, 3], mf[:, 2], mg[:, 3], mg[:, 2])
+                if w > 0.00001:
+                    totp += p*w
+                    totw += w
+        if totw > 0.0:
+            totp /= totw
+        print("totp:", totp)  # the cameras are looking at totp
+
+        avglen = 0.
+        for f in out["frames"]:
+            avglen += np.linalg.norm(f["transform_matrix"][0:3, 3])
+        avglen /= len(out["frames"])
+        print("avg camera distance from origin", avglen)
+        
+    else:
+        totp = TOTP
+        avglen = AVGLEN
+
+    
     for f in out["frames"]:
         f["transform_matrix"][0:3, 3] -= totp
 
-    avglen = 0.
     for f in out["frames"]:
-        avglen += np.linalg.norm(f["transform_matrix"][0:3, 3])
-    avglen /= len(out["frames"])
-    print("avg camera distance from origin", avglen)
-
-    for f in out["frames"]:
-        f["transform_matrix"][0:3, 3] *= 4.0 * SCENE_SCALE / avglen  # scale to "nerf sized"
+        f["transform_matrix"][0:3, 3] *= 4.0 * SCENE_SCALE_COEFF / avglen  # scale to "nerf sized"
 
     # print(nframes,"frames")
     for f in out["frames"]:
