@@ -290,7 +290,7 @@ def process_nuscenes_sample(sample, sensor_keys=["CAM_FRONT"]):
             "w": w,
             "h": h
         }
-        print(c2w)
+        # print(c2w)
         frame = {"file_path":	os.path.relpath(
             abs_path), "sharpness": b, "transform_matrix": c2w, **camera_out}
         yield frame
@@ -323,6 +323,10 @@ if __name__ == "__main__":
         if not TOTP or len(TOTP)!=3:
             print("Please specify --totp x y z, or use --adaptive_rescale")
             exit(1)
+        else:
+            print(TOTP)
+            TOTP = np.array(TOTP)
+            print(TOTP.shape)
         if not AVGLEN:
             print("Please specify --avglen, or use --adaptive_rescale")
             exit(1)
@@ -361,11 +365,11 @@ if __name__ == "__main__":
     R = np.pad(R, [0, 1])
     R[-1, -1] = 1
 
-    if ADAPTIVE_RESCALE:
-        for f in out["frames"]:
-            f["transform_matrix"] = np.matmul(
-                R, f["transform_matrix"])  # rotate up to be the z axis
+    for f in out["frames"]:
+        f["transform_matrix"] = np.matmul(
+            R, f["transform_matrix"])  # rotate up to be the z axis
 
+    if ADAPTIVE_RESCALE:
         # find a central point they are all looking at
         print("computing center of attention...")
         totw = 0.0
@@ -382,7 +386,13 @@ if __name__ == "__main__":
         if totw > 0.0:
             totp /= totw
         print("totp:", totp)  # the cameras are looking at totp
+    else:
+        totp = TOTP
 
+    for f in out["frames"]:
+        f["transform_matrix"][0:3, 3] -= totp
+
+    if ADAPTIVE_RESCALE:
         avglen = 0.
         for f in out["frames"]:
             avglen += np.linalg.norm(f["transform_matrix"][0:3, 3])
@@ -390,12 +400,7 @@ if __name__ == "__main__":
         print("avg camera distance from origin", avglen)
         
     else:
-        totp = TOTP
         avglen = AVGLEN
-
-    
-    for f in out["frames"]:
-        f["transform_matrix"][0:3, 3] -= totp
 
     for f in out["frames"]:
         f["transform_matrix"][0:3, 3] *= 4.0 * SCENE_SCALE_COEFF / avglen  # scale to "nerf sized"
