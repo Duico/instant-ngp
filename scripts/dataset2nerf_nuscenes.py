@@ -57,6 +57,7 @@ def parse_args():
     parser.add_argument("--vocab_path", default="",
                         help="vocabulary tree path")
     parser.add_argument('--totp', nargs='+', type=float, help='center of attention. Subtracted from the position of each camera.')
+    parser.add_argument('--up', nargs='+', type=float, help='up vector. Used to reorient the scene.')
     parser.add_argument('--avglen', type=float, help='avg distance of cameras from center. Used as an inverse scaling factor.')
     parser.add_argument("--adaptive_rescale",  action="store_true", help="compute totp and avglen automatically, instead of using the ones provided via --totp --avglen")
     
@@ -319,6 +320,8 @@ if __name__ == "__main__":
     ADAPTIVE_RESCALE = args.adaptive_rescale
     TOTP = args.totp
     AVGLEN = args.avglen
+    UP=args.up
+
     if not ADAPTIVE_RESCALE:
         if not TOTP or len(TOTP)!=3:
             print("Please specify --totp x y z, or use --adaptive_rescale")
@@ -329,6 +332,9 @@ if __name__ == "__main__":
             print(TOTP.shape)
         if not AVGLEN:
             print("Please specify --avglen, or use --adaptive_rescale")
+            exit(1)
+        if not UP or len(UP)!=3:
+            print("Please specify --up, or use --adaptive_rescale")
             exit(1)
 
 
@@ -353,21 +359,25 @@ if __name__ == "__main__":
         for frame in process_nuscenes_sample(sample, SENSOR_KEYS):
             out["frames"].append(frame)
 
-    # up = np.zeros(3)
+    if ADAPTIVE_RESCALE:
+        up = np.zeros(3)
 
-    # for f in out["frames"]:
-    #     up += f["transform_matrix"][0:3,1]
+        for f in out["frames"]:
+            up += f["transform_matrix"][0:3,1]
 
-    # # reorient the scene to be easier to work with
-    # up = up / np.linalg.norm(up)
-    # print("up vector was", up)
-    # R = rotmat(up, [0, 0, 1])  # rotate up vector to [0,0,1]
-    # R = np.pad(R, [0, 1])
-    # R[-1, -1] = 1
+        # reorient the scene to be easier to work with
+        up = up / np.linalg.norm(up)
+        print("up vector was", up)
 
-    # for f in out["frames"]:
-    #     f["transform_matrix"] = np.matmul(
-    #         R, f["transform_matrix"])  # rotate up to be the z axis
+    else:
+        up = UP
+
+    R = rotmat(up, [0, 0, 1])  # rotate up vector to [0,0,1]
+    R = np.pad(R, [0, 1])
+    R[-1, -1] = 1
+    for f in out["frames"]:
+        f["transform_matrix"] = np.matmul(
+            R, f["transform_matrix"])  # rotate up to be the z axis
 
     if ADAPTIVE_RESCALE:
         # find a central point they are all looking at
