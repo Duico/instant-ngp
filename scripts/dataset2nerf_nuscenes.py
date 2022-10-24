@@ -60,11 +60,10 @@ def parse_args():
     parser.add_argument('--up', nargs='+', type=float, help='up vector. Used to reorient the scene.')
     parser.add_argument('--avglen', type=float, help='avg distance of cameras from center. Used as an inverse scaling factor.')
     parser.add_argument("--adaptive_rescale",  action="store_true", help="compute totp and avglen automatically, instead of using the ones provided via --totp --avglen")
-    
     parser.add_argument("--num_dataset_samples", required=True, type=int, help="number of samples (car positions) to be loaded from the dataset")
     parser.add_argument("--scene_num", required=True, type=int, help="id of the scene to be loaded")
     parser.add_argument("--sensors", nargs="+", choices=["CAM_FRONT", "CAM_FRONT_LEFT", "CAM_FRONT_RIGHT", "CAM_BACK", "CAM_BACK_RIGHT", "CAM_BACK_LEFT"], help="sensors (cameras) to be used", default=["CAM_FRONT", "CAM_FRONT_LEFT", "CAM_FRONT_RIGHT", "CAM_BACK", "CAM_BACK_RIGHT", "CAM_BACK_LEFT"])
-
+    parser.add_argument("--nuscenes_dataroot", default="/data/sets/nuscenes", help="default is /data/sets/nuscenes")
     args = parser.parse_args()
     return args
 
@@ -302,15 +301,21 @@ def process_nuscenes_sample(sample, sensor_keys=["CAM_FRONT"]):
 
 
 if __name__ == "__main__":
-    nusc = NuScenes(version='v1.0-mini',
-                    dataroot='/home/iaaip/Development/nuscenes', verbose=True)
+    args = parse_args()
+    nusc = NuScenes(version='v1.0-mini', dataroot=args.nuscenes_dataroot, verbose=True)
     SCENE_SCALE_COEFF = 0.5
 
     args = parse_args()
     SENSOR_KEYS = args.sensors
     NUM_SAMPLES = args.num_dataset_samples
-    SCENE_NUM = args.scene_num # 6
+    SCENE_NUM = args.scene_num # 3 or 6
     
+    SENSOR_KEYS = ["CAM_FRONT", "CAM_FRONT_LEFT",
+                   "CAM_FRONT_RIGHT", "CAM_BACK", "CAM_BACK_RIGHT", "CAM_BACK_LEFT"]
+    NUM_SAMPLES = 14
+    SCENE_NUM = 3 # 6
+    SCENE_SCALE_COEFF = 0.5
+
     if args.video_in != "":
         run_ffmpeg(args)
     # if args.run_colmap:
@@ -344,7 +349,7 @@ if __name__ == "__main__":
 
     print(f"outputting to {OUT_PATH}...")
 
-    out: dict[str, list] = {
+    out = {
         "aabb_scale": AABB_SCALE,
         "frames": [],
     }
