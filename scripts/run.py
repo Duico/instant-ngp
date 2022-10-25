@@ -15,6 +15,7 @@ import commentjson as json
 import numpy as np
 
 import shutil
+import uuid
 import time
 
 from common import *
@@ -50,7 +51,7 @@ def parse_args():
 	parser.add_argument("--video_fps", type=int, default=60, help="Number of frames per second.")
 	parser.add_argument("--video_n_seconds", type=int, default=1, help="Number of seconds the rendered video should be long.")
 	parser.add_argument("--video_spp", type=int, default=8, help="Number of samples per pixel. A larger number means less noise, but slower rendering.")
-	parser.add_argument("--video_output", type=str, default="video.mp4", help="Filename of the output video.")
+	parser.add_argument("--video_output", type=str, default="video.mov", help="Filename of the output video.")
 
 	parser.add_argument("--save_mesh", default="", help="Output a marching-cubes based mesh from the NeRF or SDF model. Supports OBJ and PLY format.")
 	parser.add_argument("--marching_cubes_res", default=256, type=int, help="Sets the resolution for the marching cubes grid.")
@@ -341,15 +342,16 @@ if __name__ == "__main__":
 
 		resolution = [args.width or 1920, args.height or 1080]
 		n_frames = args.video_n_seconds * args.video_fps
-
-		if "tmp" in os.listdir():
-			shutil.rmtree("tmp")
-		os.makedirs("tmp")
+                
+		tmp_dir = "tmp"+str(uuid.uuid4())
+		if tmp_dir in os.listdir():
+			shutil.rmtree(tmp_dir)
+		os.makedirs(tmp_dir)
 
 		for i in tqdm(list(range(min(n_frames, n_frames+1))), unit="frames", desc=f"Rendering video"):
 			testbed.camera_smoothing = args.video_camera_smoothing
 			frame = testbed.render(resolution[0], resolution[1], args.video_spp, True, float(i)/n_frames, float(i + 1)/n_frames, args.video_fps, shutter_fraction=0.5)
-			write_image(f"tmp/{i:04d}.jpg", np.clip(frame * 2**args.exposure, 0.0, 1.0), quality=100)
+			write_image(f"{tmp_dir}/{i:04d}.jpg", np.clip(frame * 2**args.exposure, 0.0, 1.0), quality=100)
 
-		os.system(f"ffmpeg -y -framerate {args.video_fps} -i tmp/%04d.jpg -c:v libx264 -pix_fmt yuv420p {args.video_output}")
-		shutil.rmtree("tmp")
+		os.system(f"ffmpeg -y -framerate {args.video_fps} -i {tmp_dir}/%04d.jpg -c:v prores -pix_fmt yuv420p {args.video_output}")
+		# shutil.rmtree(tmp_dir)
