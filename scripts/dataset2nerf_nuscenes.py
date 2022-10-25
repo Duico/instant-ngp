@@ -310,8 +310,6 @@ if __name__ == "__main__":
     NUM_SAMPLES = args.num_dataset_samples
     SCENE_NUM = args.scene_num # 3 or 6
     
-    SENSOR_KEYS = ["CAM_FRONT", "CAM_FRONT_LEFT",
-                   "CAM_FRONT_RIGHT", "CAM_BACK", "CAM_BACK_RIGHT", "CAM_BACK_LEFT"]
     NUM_SAMPLES = 14
     SCENE_NUM = 3 # 6
     SCENE_SCALE_COEFF = 0.5
