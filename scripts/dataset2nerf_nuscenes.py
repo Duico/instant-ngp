@@ -309,10 +309,6 @@ if __name__ == "__main__":
     SENSOR_KEYS = args.sensors
     NUM_SAMPLES = args.num_dataset_samples
     SCENE_NUM = args.scene_num # 3 or 6
-    
-    NUM_SAMPLES = 14
-    SCENE_NUM = 3 # 6
-    SCENE_SCALE_COEFF = 0.5
 
     if args.video_in != "":
         run_ffmpeg(args)
