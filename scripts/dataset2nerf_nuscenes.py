@@ -319,7 +319,7 @@ if __name__ == "__main__":
     SENSOR_KEYS = args.sensors
     NUM_SAMPLES = args.num_dataset_samples
     SCENE_NUM = args.scene_num # 3 or 6
-    IMAGES_DIR = "./images"
+    IMAGES_DIR = "./images_masks"
 
     if args.video_in != "":
         run_ffmpeg(args)
