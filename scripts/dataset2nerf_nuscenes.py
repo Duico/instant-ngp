@@ -9,11 +9,9 @@
 # license agreement from NVIDIA CORPORATION is strictly prohibited.
 
 import argparse
-from gettext import translation
 import os
 from pathlib import Path, PurePosixPath
 from tkinter import Y
-from traceback import print_tb
 
 import numpy as np
 import json
@@ -64,6 +62,8 @@ def parse_args():
     parser.add_argument("--scene_num", required=True, type=int, help="id of the scene to be loaded")
     parser.add_argument("--sensors", nargs="+", choices=["CAM_FRONT", "CAM_FRONT_LEFT", "CAM_FRONT_RIGHT", "CAM_BACK", "CAM_BACK_RIGHT", "CAM_BACK_LEFT"], help="sensors (cameras) to be used", default=["CAM_FRONT", "CAM_FRONT_LEFT", "CAM_FRONT_RIGHT", "CAM_BACK", "CAM_BACK_RIGHT", "CAM_BACK_LEFT"])
     parser.add_argument("--nuscenes_dataroot", default="/data/sets/nuscenes", help="default is /data/sets/nuscenes")
+    parser.add_argument("--dont_copy_images", action="store_true", help="leave the images inside the nuscenes dataroot")
+
     args = parser.parse_args()
     return args
 
@@ -294,6 +294,11 @@ def process_nuscenes_sample(sample, sensor_keys=["CAM_FRONT"]):
             "w": w,
             "h": h
         }
+
+        if not args.dont_copy_images:
+            symlink_path = os.path.abspath(os.path.join(IMAGES_DIR, os.path.basename(abs_path)))
+            os.link(abs_path, symlink_path)
+            abs_path = symlink_path
         # print(c2w)
         frame = {"file_path":	os.path.relpath(
             abs_path), "sharpness": b, "transform_matrix": c2w, **camera_out}
@@ -302,13 +307,19 @@ def process_nuscenes_sample(sample, sensor_keys=["CAM_FRONT"]):
 
 if __name__ == "__main__":
     args = parse_args()
-    nusc = NuScenes(version='v1.0-mini', dataroot=args.nuscenes_dataroot, verbose=True)
+    try:
+        nusc = NuScenes(version='v1.0-mini', dataroot=args.nuscenes_dataroot, verbose=True)
+    except:
+        print("Failed to load NuScenes, maybe try --nuscenes_dataroot NUSCENES_DATAROOT")
+        exit(1)
+
     SCENE_SCALE_COEFF = 0.5
 
     args = parse_args()
     SENSOR_KEYS = args.sensors
     NUM_SAMPLES = args.num_dataset_samples
     SCENE_NUM = args.scene_num # 3 or 6
+    IMAGES_DIR = "./images"
 
     if args.video_in != "":
         run_ffmpeg(args)
@@ -347,6 +358,14 @@ if __name__ == "__main__":
         "aabb_scale": AABB_SCALE,
         "frames": [],
     }
+
+    if not args.dont_copy_images:
+        # potentially dangerous
+        try:
+            shutil.rmtree(IMAGES_DIR)
+        except FileNotFoundError:
+            pass
+        os.makedirs(IMAGES_DIR)
 
     my_scene = nusc.scene[SCENE_NUM]
     sample_token = my_scene['first_sample_token']
