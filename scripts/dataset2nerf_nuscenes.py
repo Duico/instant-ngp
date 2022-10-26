@@ -356,7 +356,7 @@ if __name__ == "__main__":
     sample = nusc.get('sample', sample_token)
     for frame in process_nuscenes_sample(sample, SENSOR_KEYS):
         out["frames"].append(frame)
-    for i in range(min(NUM_SAMPLES-1, my_scene["nbr_samples"])):
+    for i in range(min(NUM_SAMPLES, my_scene["nbr_samples"]) - 1):
         sample_token = sample["next"]
         sample = nusc.get('sample', sample_token)
         for frame in process_nuscenes_sample(sample, SENSOR_KEYS):
