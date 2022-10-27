@@ -68,10 +68,10 @@ def process_nuscenes_record(nusc, record):
         mask_filename = f'masks/dynamic_mask_{filename}.png'
         create_mask(im, mask_filename)
 
-def create_masks_for_nuscenes_sequence(nuscenes_root_dir, scene_token):
+def create_masks_for_nuscenes_sequence(nuscenes_root_dir, scene_index):
     # Process nuscenes images
     nusc = NuScenes(version='v1.0-mini', dataroot=nuscenes_root_dir, verbose=True)
-    scene = [scene for scene in nusc.scene if scene["token"] == scene_token][0]
+    scene = nusc.scene[scene_index]
     current_token = scene["first_sample_token"]
     last_sample_token = scene["last_sample_token"]
     n_samples = scene["nbr_samples"]
@@ -98,7 +98,7 @@ if __name__ == "__main__":
         os.makedirs(masks_path)
 
     nuscenes_root_dir = sys.argv[1]
-    nuscenes_scene = sys.argv[2]
+    nuscenes_scene_index = int(sys.argv[2])
 
     # Create and save masks
-    create_masks_for_nuscenes_sequence(sys.argv[1], sys.argv[2])
+    create_masks_for_nuscenes_sequence(nuscenes_root_dir, nuscenes_scene_index)
